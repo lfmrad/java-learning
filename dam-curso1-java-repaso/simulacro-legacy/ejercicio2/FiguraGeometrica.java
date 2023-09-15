@@ -1,0 +1,3 @@
+interface FiguraGeometrica {
+    double calcularPerimetro();
+}
