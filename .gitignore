@@ -25,3 +25,15 @@ replay_pid*
 
 # CUSTOM
 *.txt
+
+# MAVEN
+# Compiled bytecode
+/target/
+
+# IDE-specific files (vscode, IntelliJ IDEA, Eclipse)
+/.vscode/
+/.idea/
+*.iml
+/.classpath
+/.project
+/.settings/
