@@ -1,5 +1,5 @@
 import database.DBManager;
-import model.Product;
+import model.*;
 import util.ImportTools;
 import java.util.List;
 
@@ -16,19 +16,29 @@ import java.util.List;
 
 public class NorthwindMain {
     public static void main(String[] args) {
-
         DBManager.initDB();
-        DBManager.clearDB();
+        DBManager.clearDB(true);
 
-        //testing
+        // *** PUNTO 2 ***
+        // Se importa el JSON a una lista de objetos tipo producto que poseen los atributos deseados
         List<Product> importedProducts = ImportTools.importDummyProductsFromJSON();
-        System.out.println("número items importados JSON:" + importedProducts.size());
-
+        System.out.println("Total items importados:" + importedProducts.size());
         for (Product product : importedProducts) {
             System.out.println(product.toString());
         }
+        // Se importa esta lista en la base de datos
+        DBManager.addProduct(importedProducts);
 
-        // DBManager.addProduct(importedProducts);
+        // *** PUNTO 3 - Agregar una serie de empleados y pedidos mediante statement ***
+        // (Se tiene en cuenta que los pedidos tienen FK de productos.)
+        // Serie de empleados:
 
+        // Serie de pedidos:
+        Product iphoneX = DBManager.getProductById(2);
+        Product hpPavilion = DBManager.getProductById(10);
+        Order dummyOrder1 = new Order(iphoneX, "This is a dummy order with: " + iphoneX.getName());
+        DBManager.addOrder(dummyOrder1);
+        Order dummyOrder2 = new Order(hpPavilion, "This is a dummy order with: " + hpPavilion.getName());
+        DBManager.addOrder(dummyOrder2);
     }
 }

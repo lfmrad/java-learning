@@ -4,6 +4,7 @@ public class Product {
     private String info;
     private int stock;
     private int price;
+    private int id;
 
     public Product(String name, String info, int stock, int price) {
         this.name = name;
@@ -12,8 +13,24 @@ public class Product {
         this.price = price;
     }
 
+    public Product(int id, String name, String info, int stock, int price) {
+        this(name, info, stock, price);
+        this.id = id;
+    }
+
     public String getName() {
         return name;
+    }
+
+    public void setId(int id) {
+        this.id = id;
+    }
+
+    public int getId() {
+        if (id == 0) {
+            System.out.println("ID not yet assigned!");
+        }
+        return id;
     }
 
     public void setName(String name) {
@@ -48,9 +65,10 @@ public class Product {
     public String toString() {
         return "Product{" +
                 "name='" + name + '\'' +
-                ", description='" + info + '\'' +
+                ", info='" + info + '\'' +
                 ", stock=" + stock +
                 ", price=" + price +
+                ", id=" + id +
                 '}';
     }
 }
