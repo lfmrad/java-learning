@@ -18,9 +18,8 @@ public class NorthwindMain {
     private static void launchDemo() {
         boolean exitProgram = false;
 
-        System.out.println("Northwind Suite - Demostración de funcionamiento: ");
-
         do {
+            System.out.println("\nNORTHWIND - Demostración de funcionamiento: ");
             System.out.println("1. Conectar base de datos y purgar (para empezar de 0).");
             System.out.println("2. Purgar base de datos (vacía tablas y reinicia claves).");
             System.out.println("3. Agregar los productos ubicados en " + SchemaUtil.IMPORT_URL + " a la tabla de productos.");
@@ -35,6 +34,7 @@ public class NorthwindMain {
             System.out.println("12. FINALIZAR DEMO.");
 
             int selectedOption = getUserSelection("Escoge una opción del 1 al 12: ", 12);
+            System.out.println("\n");
 
             switch (selectedOption) {
                 case 1:
@@ -58,12 +58,15 @@ public class NorthwindMain {
                     break;
                 case 7:
                     listALlEmployees(false);
+                    listALlEmployees(true);
                     break;
                 case 8:
                     listAllProducts(false);
+                    listAllProducts(true);
                     break;
                 case 9:
                     listALlOrders(false);
+                    listALlOrders(true);
                     break;
                 case 10:
                     List<Product> productsUnder600 = DBManager.getProducts(600,false);
@@ -74,6 +77,7 @@ public class NorthwindMain {
                 case 11:
                     List<Product> productsOver1000 = DBManager.getProducts(1000,true);
                     DBManager.addToFavorites(productsOver1000);
+                    DBManager.printAllDataFrom(SchemaDB.Tabs.FAVPRODUCTS);
                     break;
                 default:
                     System.out.println("Finalizando demo...");
@@ -154,10 +158,15 @@ public class NorthwindMain {
         System.out.println("Nuevos pedidos añadidos.");
     }
 
+    private static String formatoTablaMsg = "\n*** FORMATO TABLA *** (leyendo directamente de la BD) ";
+    private static String formatoObjetoMsg = "\n*** FORMATO OBJETO *** (.toString() tras importarlos de la BD)";
+
     private static void listALlOrders(boolean printFromDB) {
         if (printFromDB) {
+            System.out.println(formatoTablaMsg);
             DBManager.printAllDataFrom(SchemaDB.Tabs.ORDERS);
         } else {
+            System.out.println(formatoObjetoMsg);
             List<Order> allOrders = DBManager.getAllOrders();
             for (Order order : allOrders) {
                 System.out.println(order.toString());
@@ -167,8 +176,10 @@ public class NorthwindMain {
 
     private static void listALlEmployees(boolean printFromDB) {
         if (printFromDB) {
+            System.out.println(formatoTablaMsg);
             DBManager.printAllDataFrom(SchemaDB.Tabs.EMPLOYEES);
         } else {
+            System.out.println(formatoObjetoMsg);
             List<Employee> allEmployees = DBManager.getAllEmployees();
             for (Employee employee : allEmployees) {
                 System.out.println(employee.toString());
@@ -178,8 +189,10 @@ public class NorthwindMain {
 
     private static void listAllProducts(boolean printFromDB) {
         if (printFromDB) {
+            System.out.println(formatoTablaMsg);
             DBManager.printAllDataFrom(SchemaDB.Tabs.PRODUCTS);
         } else {
+            System.out.println(formatoObjetoMsg);
             List<Product> allProducts = DBManager.getAllProducts();
             for (Product product : allProducts) {
                 System.out.println(product.toString());
@@ -200,6 +213,7 @@ public class NorthwindMain {
                 }
             } catch (InputMismatchException e) {
                 System.out.println("Entrada inválida: " + e.getMessage());
+                sc.nextLine();
             }
         }
     }
