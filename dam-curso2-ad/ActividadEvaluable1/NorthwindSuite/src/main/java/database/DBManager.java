@@ -32,6 +32,7 @@ public class DBManager {
         if (connection != null) {
             try {
                 connection.close();
+                System.out.println("Disconnected from DB: " + SchemaDB.NAME);
             } catch (SQLException e) {
                 throw new RuntimeException(e);
             }
