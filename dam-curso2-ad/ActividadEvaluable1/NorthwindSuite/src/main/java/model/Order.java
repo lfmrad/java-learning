@@ -5,6 +5,8 @@ public class Order {
     private Product product;
     private int totalPrice;
 
+    private int id;
+
     public Order(Product product, String info) {
         if (product != null) {
             this.product = product;
@@ -13,6 +15,11 @@ public class Order {
         } else {
             System.out.println("Product is null. An actual product must be provided to create an order.");
         }
+    }
+
+    public Order(int id, Product product, String info) {
+        this(product, info);
+        this.id = id;
     }
 
     public int getAssociatedProductID() {
@@ -29,5 +36,15 @@ public class Order {
 
     public void setInfo(String info) {
         this.info = info;
+    }
+
+    @Override
+    public String toString() {
+        return "Order{" +
+                "info='" + info + '\'' +
+                ", product=" + product.toString() +
+                ", totalPrice=" + totalPrice +
+                ", id=" + id +
+                '}';
     }
 }
