@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <style name="NumberButtonStyle">
-        <item name="android:textSize">50sp</item>
-        <item name="android:background">@color/black</item>
+    <style name="CommonButtonStyle" parent="Widget.Material3.Button">
+        <item name="android:textSize">@dimen/global_button_text_size</item>
     </style>
 </resources>

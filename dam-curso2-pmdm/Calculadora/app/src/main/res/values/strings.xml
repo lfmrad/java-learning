@@ -6,7 +6,7 @@
     <string name="symbol_plus">+</string>
     <string name="symbol_minus">-</string>
     <string name="symbol_product">X</string>
-    <string name="symbol_divison">/</string>
+    <string name="symbol_divison">÷</string>
     <string name="symbol_decimal_separator">,</string>
     <string name="symbol_plusMinus">+/-</string>
     <string name="symbol_percentage">%</string>
