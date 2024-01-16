@@ -43,11 +43,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             binding.button8.id -> { inputNumber(8) }
             binding.button9.id -> { inputNumber(9) }
             // OPERATIONS
-            binding.buttonSum.id -> { firstNumber = parseNumber(digits.toString()) }
-            binding.buttonSubtraction.id -> {}
+            binding.buttonSum.id -> { operationBuffer.add(Sum()) }
+            binding.buttonSubtraction.id -> { operationBuffer.add(Sum()) }
             binding.buttonProduct.id -> {}
             binding.buttonDivision.id -> {}
-            binding.buttonEqual.id -> { testOperation() }
+            binding.buttonEqual.id -> {}
             binding.buttonClear.id -> { clearDisplay() }
             // OTHERS
             binding.buttonPercentage.id -> {}
@@ -57,32 +57,25 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private val digits: StringBuilder = StringBuilder()
-    private var firstNumber = 0
-    private val secondNumber = 0
-    private var assignedOperation = false
-    private var inputReady = false
+    private val operationBuffer: MutableList<OperationToken> = mutableListOf()
+    private var operationPending = false
 
     private fun inputNumber(number: Int) {
-        if (!assignedOperation) {
-            digits.append(number.toString())
-            refreshDisplay(digits.toString())
-        } else {
-            clearDisplay()
-            digits.append(number.toString())
-            inputReady = true
+        if (operationPending) {
+            refreshDisplay(Calculator.computeBufferToString(operationBuffer))
+            operationPending = false
         }
+        digits.append(number.toString())
+        refreshDisplay(digits.toString())
     }
 
-    private fun testOperation() {
-        if (inputReady) {
-            var op = firstNumber + secondNumber
-            refreshDisplay(op.toString())
-        }
-    }
-
-    private fun parseNumber(savedDigits: String): Int {
-        assignedOperation = true
-        return Integer.parseInt(savedDigits)
+    private fun loadOperation(setOperation: OperationToken) {
+        val frozenNumber = Number(binding.mainDisplay.toString())
+        operationBuffer.add(frozenNumber)
+        operationBuffer.add(setOperation)
+        operationPending = true
+        Calculator.history.add(frozenNumber)
+        Calculator.history.add(setOperation)
     }
 
     private fun refreshDisplay(input: String) {
@@ -90,6 +83,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private fun clearDisplay() {
-        binding.mainDisplay.text = digits.clear()
+        binding.mainDisplay.text = 0.toString()
     }
 }
