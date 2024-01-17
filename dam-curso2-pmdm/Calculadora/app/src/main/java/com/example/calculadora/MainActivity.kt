@@ -1,5 +1,6 @@
 package com.example.calculadora
 
+import android.media.audiofx.DynamicsProcessing.Eq
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
@@ -43,12 +44,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             binding.button8.id -> { inputNumber(8) }
             binding.button9.id -> { inputNumber(9) }
             // OPERATIONS
-            binding.buttonSum.id -> { operationBuffer.add(Sum()) }
-            binding.buttonSubtraction.id -> { operationBuffer.add(Sum()) }
-            binding.buttonProduct.id -> {}
-            binding.buttonDivision.id -> {}
-            binding.buttonEqual.id -> {}
-            binding.buttonClear.id -> { clearDisplay() }
+            binding.buttonSum.id -> { loadOperation(Sum()) }
+            binding.buttonSubtraction.id -> { loadOperation(Subtraction()) }
+            binding.buttonProduct.id -> { loadOperation(Product()) }
+            binding.buttonDivision.id -> { loadOperation(Division()) }
+            binding.buttonEqual.id -> { loadOperation(Equal()) }
+            binding.buttonClear.id -> { clear() }
             // OTHERS
             binding.buttonPercentage.id -> {}
             binding.buttonDecimal.id -> {}
@@ -60,22 +61,25 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private val operationBuffer: MutableList<OperationToken> = mutableListOf()
     private var operationPending = false
 
+    lateinit var resultCandidate: String
     private fun inputNumber(number: Int) {
-        if (operationPending) {
-            refreshDisplay(Calculator.computeBufferToString(operationBuffer))
-            operationPending = false
-        }
         digits.append(number.toString())
         refreshDisplay(digits.toString())
     }
 
+    // 2 + 3
     private fun loadOperation(setOperation: OperationToken) {
-        val frozenNumber = Number(binding.mainDisplay.toString())
+        val frozenNumber = Number(binding.mainDisplay.text.toString())
+        digits.clear()
         operationBuffer.add(frozenNumber)
         operationBuffer.add(setOperation)
-        operationPending = true
         Calculator.history.add(frozenNumber)
         Calculator.history.add(setOperation)
+
+        val resultCandidate = Calculator.computeBufferToString(operationBuffer)
+        if (resultCandidate != null) {
+            refreshDisplay(resultCandidate)
+        }
     }
 
     private fun refreshDisplay(input: String) {
@@ -84,5 +88,17 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun clearDisplay() {
         binding.mainDisplay.text = 0.toString()
+    }
+
+    var firstPassFlushCurrent = false
+    private fun clear() {
+        digits.clear()
+        clearDisplay()
+        firstPassFlushCurrent = if (!firstPassFlushCurrent) {
+            true
+        } else {
+            operationBuffer.clear()
+            false
+        }
     }
 }
