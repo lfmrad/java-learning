@@ -3,6 +3,7 @@ package com.example.calculadora
 import android.media.audiofx.DynamicsProcessing.Eq
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
@@ -65,20 +66,25 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private fun inputNumber(number: Int) {
         digits.append(number.toString())
         refreshDisplay(digits.toString())
+        newNumberProvided = true
     }
 
-    // 2 + 3
+    var newNumberProvided = false
     private fun loadOperation(setOperation: OperationToken) {
-        val frozenNumber = Number(binding.mainDisplay.text.toString())
-        digits.clear()
-        operationBuffer.add(frozenNumber)
-        operationBuffer.add(setOperation)
-        Calculator.history.add(frozenNumber)
-        Calculator.history.add(setOperation)
+        Log.d("CUSTOM", "IN OPERATION LOADER")
+        if (newNumberProvided) {
+            val frozenNumber = Number(binding.mainDisplay.text.toString())
+            newNumberProvided = false
+            digits.clear()
+            operationBuffer.add(frozenNumber)
+            operationBuffer.add(setOperation)
+            Calculator.history.add(frozenNumber)
+            Calculator.history.add(setOperation)
 
-        val resultCandidate = Calculator.computeBufferToString(operationBuffer)
-        if (resultCandidate != null) {
-            refreshDisplay(resultCandidate)
+            val resultCandidate = Calculator.computeBufferToString(operationBuffer)
+            if (resultCandidate != null) {
+                refreshDisplay(resultCandidate)
+            }
         }
     }
 
