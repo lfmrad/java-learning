@@ -60,32 +60,44 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private val digits: StringBuilder = StringBuilder()
     private val operationBuffer: MutableList<OperationToken> = mutableListOf()
-    private var operationPending = false
 
-    lateinit var resultCandidate: String
     private fun inputNumber(number: Int) {
         digits.append(number.toString())
         refreshDisplay(digits.toString())
-        newNumberProvided = true
+        numberCreationInProcess = true
     }
 
-    var newNumberProvided = false
-    private fun loadOperation(setOperation: OperationToken) {
-        Log.d("CUSTOM", "IN OPERATION LOADER")
-        if (newNumberProvided) {
-            val frozenNumber = Number(binding.mainDisplay.text.toString())
-            newNumberProvided = false
+    // 11 y buffer vacio
+    // =
+    var numberCreationInProcess = false
+
+
+    private fun loadOperation(vararg setOperations: OperationToken) {
+        Log.d("CUSTOM", "IN loadOperation() operationBuffer.size: ${operationBuffer.size}")
+
+        if (numberCreationInProcess) {
+            val frozenNumber = parseScreen()
+            numberCreationInProcess = false
             digits.clear()
             operationBuffer.add(frozenNumber)
-            operationBuffer.add(setOperation)
             Calculator.history.add(frozenNumber)
-            Calculator.history.add(setOperation)
-
-            val resultCandidate = Calculator.computeBufferToString(operationBuffer)
-            if (resultCandidate != null) {
-                refreshDisplay(resultCandidate)
+            setOperations.forEach {
+                operationBuffer.add(it)
+                Calculator.history.add(it)
             }
+
         }
+
+        val resultProvided = Calculator.computeBufferToString(operationBuffer)
+         resultProvided?.let {
+            refreshDisplay(it)
+            // allows a final result to work as a new number if the user decides to operate on it
+            numberCreationInProcess = operationBuffer.isEmpty()
+        }
+    }
+
+    private fun parseScreen(): Number {
+        return Number(binding.mainDisplay.text.toString())
     }
 
     private fun refreshDisplay(input: String) {
