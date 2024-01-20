@@ -3,10 +3,12 @@ package com.example.calculadora
 import android.media.audiofx.DynamicsProcessing.Eq
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
+import android.text.method.ScrollingMovementMethod
 import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.widget.Button
+import com.example.calculadora.Calculator.Companion.getHistory
 import com.example.calculadora.databinding.ActivityMainBinding
 
 class MainActivity : AppCompatActivity(), View.OnClickListener {
@@ -16,6 +18,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
         setListenersToButtons(binding.mainButtonGrid)
+        binding.secondaryDisplay.movementMethod = ScrollingMovementMethod()
     }
 
     /*  Instead of mapping the class for each listener doing:
@@ -52,7 +55,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             binding.buttonEqual.id -> { loadOperation(Equal()) }
             binding.buttonClear.id -> { clear() }
             // OTHERS
-            binding.buttonPercentage.id -> {}
+            binding.buttonPercentage.id -> {
+                loadOperation(Product(), Number(5.0))
+            }
             binding.buttonDecimal.id -> {}
             binding.buttonPlusMinus.id -> {}
         }
@@ -67,8 +72,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         numberCreationInProcess = true
     }
 
-    // 11 y buffer vacio
-    // =
     var numberCreationInProcess = false
 
 
@@ -80,19 +83,23 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             numberCreationInProcess = false
             digits.clear()
             operationBuffer.add(frozenNumber)
-            Calculator.history.add(frozenNumber)
+            Calculator.history.add(Number(frozenNumber.num))
             setOperations.forEach {
                 operationBuffer.add(it)
                 Calculator.history.add(it)
             }
-
         }
 
         val resultProvided = Calculator.computeBufferToString(operationBuffer)
-         resultProvided?.let {
+        // allows a final result to work as a new number if the user decides to operate on it:
+        resultProvided?.let {
             refreshDisplay(it)
-            // allows a final result to work as a new number if the user decides to operate on it
             numberCreationInProcess = operationBuffer.isEmpty()
+        }
+
+        val historyProvided = Calculator.getHistory()
+        historyProvided?.let {
+            refreshSecondaryDisplay(it)
         }
     }
 
@@ -102,6 +109,9 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private fun refreshDisplay(input: String) {
         binding.mainDisplay.text = input
+    }
+    private fun refreshSecondaryDisplay(input: String) {
+        binding.secondaryDisplay.text = input
     }
 
     private fun clearDisplay() {

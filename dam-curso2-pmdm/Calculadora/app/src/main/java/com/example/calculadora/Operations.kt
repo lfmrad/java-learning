@@ -7,9 +7,12 @@ interface Calculation : OrderedToken {
     fun calculate(firstOperand: Double, secondOperand: Double): Double
 }
 
-interface OrderedToken : OrderOfOperations, OperationToken
+interface OrderedToken : OrderOfOperations, OperationToken {
+    val symbol: String
+}
 
-class Number(var num: Double = 0.0) : OperationToken {
+open class Number(var num: Double = 0.0) : OperationToken {
+    var isResult = false
     // TODO property to handle self applying operations such as sin, tan, fact, etc. + interface to provide a method to compute them
     // ie MetaCalculation : Calculation; Number(new MetaCalculation to apply); number.computeMeta etc etc
     constructor(textToParse: String) : this(parseStringToNumber(textToParse))
@@ -36,47 +39,54 @@ interface OrderOfOperations {
 }
 
 class Sum() : Calculation {
+    override val symbol: String = "+"
     override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.ADD_AND_SUB
     override fun calculate(firstOperand: Double, secondOperand: Double): Double = firstOperand + secondOperand
 }
 
 class Subtraction() : Calculation {
+    override val symbol: String = "-"
     override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.ADD_AND_SUB
     override fun calculate(firstOperand: Double, secondOperand: Double): Double = firstOperand - secondOperand
 }
 
 class Division() : Calculation {
+    override val symbol: String = "/"
     override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.PROD_AND_DIV
     override fun calculate(firstOperand: Double, secondOperand: Double): Double = firstOperand / secondOperand
 }
 
 class Product() : Calculation {
+    override val symbol: String = "x"
     override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.PROD_AND_DIV
     override fun calculate(firstOperand: Double, secondOperand: Double): Double = firstOperand * secondOperand
 }
 
 class Equal() : OrderedToken {
+    override val symbol: String = "="
     override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.EQUAL
 }
 
 class Parenthesis(val open: Boolean) : OrderedToken {
+    override val symbol: String = "()"
     override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.PARENTHESES
 }
 
 class Calculator {
     companion object {
-        val history: MutableList<OperationToken> = mutableListOf()
         private var chunkPointer = 0
 
         // TODO: FIX / MISSING IMPLEMENTATION (CHANGE OF MIND; from x to + mid operating)
         // apple: 2 + 3 x 3 x (display 9) + 1 (display 11) = 12
         // mine: 2 + 3 x 3 x (display 9) + 1 (missing display update) = 11
+        // mine: 2 + 3 x 3 + (display 11) 1 = 12
 
         fun computeBuffer(operationBuffer: MutableList<OperationToken>): Double? {
             Log.d("CUSTOM", "ENTERED computeBufer(), size: ${operationBuffer.size}")
             operationBuffer.forEach {
                 Log.d("CUSTOM", "<insideBuffer: ${it.javaClass.simpleName} >")
             }
+
             // TODO computeInsideParenthesisFirst(operationBuffer) WIP
             while (operationBuffer.size > 3) { // minimum computable chunk: X op X op2
                 val firstNum = (operationBuffer[chunkPointer] as Number)
@@ -109,6 +119,9 @@ class Calculator {
                         if (secondOp is Equal) {
                             // CASE 1: if NOT looking ahead AND secondOp is Equal... THIS IS END OF THE BUFFER
                             operationBuffer.clear() // clears it and then returns the final result after the if
+                            val result: Number = Number(firstNum.num)
+                            result.isResult = true
+                            history.add(result)
                             Log.d("CUSTOM", "RETURN 1: Computed LAST chunk (EQUAL) and cleared the buffer. FINAL RESULT.")
                         } else { //
                             // CASE 2: if NOT looking and secondOp is not Equal -> uncompleted block >2 - _<
@@ -129,9 +142,12 @@ class Calculator {
             // prevents  a final operation with no effect (ie >2 = _<) from filling the buffer (logic breaking)
             if (operationBuffer[1] is Equal && operationBuffer[0] is Number) {
                 Log.d("CUSTOM", "RETURN 3: Computed meaningless op. + cleared the buffer ")
-                val returnCopy = (operationBuffer[0] as Number).num
+                val resultCopy = Number((operationBuffer[0] as Number).num)
+                val lastIndex = history.lastIndex
+                history.removeAt(lastIndex)
+                history.removeAt(lastIndex - 1)
                 operationBuffer.clear()
-                return returnCopy
+                return resultCopy.num
             }
 
             Log.d("CUSTOM", "RETURN NULL: Not enough op. in the buffer to compute anything... ")
@@ -180,6 +196,25 @@ class Calculator {
 
         fun computeBufferToString(operationBuffer: MutableList<OperationToken>): String? {
             return computeBuffer(operationBuffer)?.let { Number.parseNumberToString(it) }
+        }
+        val history: MutableList<OperationToken> = mutableListOf()
+        fun getHistory(): String? {
+            return if (history.isNotEmpty()) {
+                val parsedHistory: StringBuilder = StringBuilder()
+                history.forEach {
+                    if (it is OrderedToken) {
+                        parsedHistory.append(it.symbol)
+                    } else if (it is Number) {
+                        parsedHistory.append(Number.parseNumberToString(it.num))
+                        if (it.isResult) {
+                            parsedHistory.append("; ")
+                        }
+                    }
+                }
+                parsedHistory.toString()
+            } else {
+                null
+            }
         }
     }
 }

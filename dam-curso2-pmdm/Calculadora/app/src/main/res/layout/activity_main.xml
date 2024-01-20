@@ -20,6 +20,7 @@
         app:layout_constraintHeight_percent="0.3"
     />
 
+
     <GridLayout
         android:id="@+id/mainButtonGrid"
         android:layout_width="0dp"
@@ -27,7 +28,7 @@
         android:rowCount="5"
         android:columnCount="4"
         app:layout_constraintTop_toBottomOf="@id/mainDisplay"
-        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/secondaryDisplay"
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintLeft_toLeftOf="parent" >
 
@@ -202,5 +203,23 @@
             android:layout_gravity="fill"
             android:text="@string/symbol_equals" />
     </GridLayout>
+
+    <TextView
+        android:id="@+id/secondaryDisplay"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:text="..."
+        android:textSize="30sp"
+
+        android:singleLine="true"
+        android:scrollHorizontally="true"
+        android:ellipsize="none"
+        android:gravity="bottom|end"
+
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/mainButtonGrid"
+        app:layout_constraintBottom_toBottomOf="parent"
+        />
 
 </androidx.constraintlayout.widget.ConstraintLayout>
