@@ -17,20 +17,41 @@
         app:layout_constraintRight_toRightOf="parent"
         app:layout_constraintLeft_toLeftOf="parent"
         app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toTopOf="@id/secondaryDisplay"
         app:layout_constraintHeight_percent="0.3"
     />
+
+    <TextView
+        android:id="@+id/secondaryDisplay"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:text="..."
+        android:textSize="30sp"
+
+        android:singleLine="true"
+        android:scrollHorizontally="true"
+        android:ellipsize="none"
+        android:gravity="bottom|end"
+
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintTop_toBottomOf="@id/mainDisplay"
+        app:layout_constraintBottom_toTopOf="@id/mainButtonGrid"
+        app:layout_constraintHeight_percent="0.1"
+        />
 
 
     <GridLayout
         android:id="@+id/mainButtonGrid"
         android:layout_width="0dp"
         android:layout_height="0dp"
-        android:rowCount="5"
+        android:rowCount="6"
         android:columnCount="4"
-        app:layout_constraintTop_toBottomOf="@id/mainDisplay"
-        app:layout_constraintBottom_toTopOf="@id/secondaryDisplay"
+        app:layout_constraintTop_toBottomOf="@id/secondaryDisplay"
+        app:layout_constraintBottom_toTopOf="@id/testButtonGrid"
         app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent" >
+        app:layout_constraintLeft_toLeftOf="parent"
+        app:layout_constraintHeight_percent="0.5">
 
         <Button
             android:id="@+id/buttonClear"
@@ -204,22 +225,58 @@
             android:text="@string/symbol_equals" />
     </GridLayout>
 
-    <TextView
-        android:id="@+id/secondaryDisplay"
+    <GridLayout
+        android:visibility="visible"
+        android:id="@+id/testButtonGrid"
         android:layout_width="0dp"
-        android:layout_height="wrap_content"
-        android:text="..."
-        android:textSize="30sp"
-
-        android:singleLine="true"
-        android:scrollHorizontally="true"
-        android:ellipsize="none"
-        android:gravity="bottom|end"
-
-        app:layout_constraintRight_toRightOf="parent"
-        app:layout_constraintLeft_toLeftOf="parent"
+        android:layout_height="0dp"
+        android:rowCount="1"
+        android:columnCount="4"
         app:layout_constraintTop_toBottomOf="@id/mainButtonGrid"
         app:layout_constraintBottom_toBottomOf="parent"
-        />
+        app:layout_constraintRight_toRightOf="parent"
+        app:layout_constraintLeft_toLeftOf="parent">
+
+        <Button
+            android:id="@+id/buttonTest1"
+            android:backgroundTint="@color/black"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:text="RST" />
+
+        <Button
+            android:id="@+id/buttonTest2"
+            android:backgroundTint="@color/black"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill"
+            android:text="t2" />
+
+        <Button
+            android:id="@+id/buttonTest3"
+            android:backgroundTint="@color/black"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill"
+            android:text="t3" />
+
+        <Button
+            android:id="@+id/buttonTest4"
+            android:backgroundTint="@color/black"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_rowWeight="1"
+            android:layout_columnWeight="1"
+            android:layout_gravity="fill"
+            android:text="t4" />
+    </GridLayout>
+
+
 
 </androidx.constraintlayout.widget.ConstraintLayout>

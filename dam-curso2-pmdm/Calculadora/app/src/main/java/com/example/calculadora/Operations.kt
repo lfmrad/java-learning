@@ -11,22 +11,21 @@ interface OrderedToken : OrderOfOperations, OperationToken {
     val symbol: String
 }
 
-open class Number(var num: Double = 0.0) : OperationToken {
-    var isResult = false
+open class Number(var value: Double = 0.0) : OperationToken {
     // TODO property to handle self applying operations such as sin, tan, fact, etc. + interface to provide a method to compute them
     // ie MetaCalculation : Calculation; Number(new MetaCalculation to apply); number.computeMeta etc etc
     constructor(textToParse: String) : this(parseStringToNumber(textToParse))
+    fun parseToString(num: Double = value) : String {
+        return num.toInt().toString()
+    }
     companion object {
         fun parseStringToNumber(textToParse: String) : Double {
             val parsedNumber = Integer.parseInt(textToParse).toDouble()
             return parsedNumber
         }
-
-        fun parseNumberToString(num: Double) : String {
-            return num.toInt().toString()
-        }
     }
 }
+class Result(value: Double = 0.0) : Number(value)
 interface OrderOfOperations {
     enum class Priority(val value: Int) {
         PARENTHESES(4),
@@ -75,13 +74,14 @@ class Parenthesis(val open: Boolean) : OrderedToken {
 class Calculator {
     companion object {
         private var chunkPointer = 0
+        val operationBuffer: MutableList<OperationToken> = mutableListOf()
 
         // TODO: FIX / MISSING IMPLEMENTATION (CHANGE OF MIND; from x to + mid operating)
         // apple: 2 + 3 x 3 x (display 9) + 1 (display 11) = 12
         // mine: 2 + 3 x 3 x (display 9) + 1 (missing display update) = 11
         // mine: 2 + 3 x 3 + (display 11) 1 = 12
 
-        fun computeBuffer(operationBuffer: MutableList<OperationToken>): Double? {
+        fun computeBuffer(): Number? {
             Log.d("CUSTOM", "ENTERED computeBufer(), size: ${operationBuffer.size}")
             operationBuffer.forEach {
                 Log.d("CUSTOM", "<insideBuffer: ${it.javaClass.simpleName} >")
@@ -90,11 +90,11 @@ class Calculator {
             // TODO computeInsideParenthesisFirst(operationBuffer) WIP
             while (operationBuffer.size > 3) { // minimum computable chunk: X op X op2
                 val firstNum = (operationBuffer[chunkPointer] as Number)
-                Log.d("CUSTOM", "NUM1: ${firstNum.num}")
+                Log.d("CUSTOM", "NUM1: ${firstNum.value}")
                 val firstOp = (operationBuffer[chunkPointer + 1] as Calculation)
                 Log.d("CUSTOM", "OP1: ${firstOp.javaClass.simpleName} & PRIORITY: ${firstOp.priority}")
                 val secondNum = (operationBuffer[chunkPointer + 2] as Number)
-                Log.d("CUSTOM", "NUM2: ${secondNum.num}")
+                Log.d("CUSTOM", "NUM2: ${secondNum.value}")
                 val secondOp = (operationBuffer[chunkPointer + 3] as OrderedToken)
                 Log.d("CUSTOM", "OP2: ${secondOp.javaClass.simpleName} & PRIORITY: ${secondOp.priority}")
 
@@ -106,12 +106,13 @@ class Calculator {
                         continue
                     } else { // nothing ahead; keep showing last number and keep waiting for more numbers; there isn't a result or update to provide
                         Log.d("CUSTOM", "RETURN 0: NOTHING TO DO YET. WAITING for next number+op.")
-                        return secondNum.num // ** (see CASE3 below)
+                        return Number(secondNum.value) // ** (see CASE3 below)
                     }
                 } else if (firstOp.priority.value >= secondOp.priority.value) { // if second op. is same or lower order, compute this chunk
                     // here first or * after moving ahead: 2 + >3 x 4 -<
                     // computes operation >3x4 -< and updates the buffer >12 - _<
-                    firstNum.num = firstOp.calculate(firstNum.num, secondNum.num)
+                    val newFirstNum: Number = Number(firstOp.calculate(firstNum.value, secondNum.value))
+                    operationBuffer.set(operationBuffer.indexOf(firstNum), newFirstNum)
                     operationBuffer.remove(firstOp)
                     operationBuffer.remove(secondNum)
                     // NOW 3 THINGS CAN HAPPEN
@@ -119,16 +120,16 @@ class Calculator {
                         if (secondOp is Equal) {
                             // CASE 1: if NOT looking ahead AND secondOp is Equal... THIS IS END OF THE BUFFER
                             operationBuffer.clear() // clears it and then returns the final result after the if
-                            val result: Number = Number(firstNum.num)
-                            result.isResult = true
+                            val result = Result(newFirstNum.value)
                             history.add(result)
                             Log.d("CUSTOM", "RETURN 1: Computed LAST chunk (EQUAL) and cleared the buffer. FINAL RESULT.")
+                            return result
                         } else { //
                             // CASE 2: if NOT looking and secondOp is not Equal -> uncompleted block >2 - _<
                             Log.d("CUSTOM", "RETURN 2: Computed base chunk (op.A>op.B). NEED more number+op. to compute more.")
                             // returns the update for the display and keeps waiting for next number to compute the operation (in the example '-')
+                            return Number(newFirstNum.value)
                         }
-                        return firstNum.num
                      } else if (moveBack()) {
                         // CASE 3: we're looking ahead & moveBack gets executed
                         // we'd be back to previous chunk >firstNum(prev.) firstOp(prev.) secondNum(this.firstNum) secondOp(this.secondOp)<;
@@ -139,15 +140,15 @@ class Calculator {
                 }
             }
 
-            // prevents  a final operation with no effect (ie >2 = _<) from filling the buffer (logic breaking)
+            // prevents a final operation with no effect (ie >2 = _<) from filling the buffer (logic breaking)
             if (operationBuffer[1] is Equal && operationBuffer[0] is Number) {
                 Log.d("CUSTOM", "RETURN 3: Computed meaningless op. + cleared the buffer ")
-                val resultCopy = Number((operationBuffer[0] as Number).num)
+                val meaninglessResult = (operationBuffer[0] as Result)
                 val lastIndex = history.lastIndex
                 history.removeAt(lastIndex)
                 history.removeAt(lastIndex - 1)
                 operationBuffer.clear()
-                return resultCopy.num
+                return meaninglessResult
             }
 
             Log.d("CUSTOM", "RETURN NULL: Not enough op. in the buffer to compute anything... ")
@@ -156,6 +157,7 @@ class Calculator {
 
         fun moveAhead(operationBuffer: MutableList<OperationToken>): Boolean {
             return if (operationBuffer.size > 4) {
+                movedBackHappened = true
                 chunkPointer += 2
                 Log.d("CUSTOM", "MOVED AHEAD!")
                 true
@@ -163,8 +165,10 @@ class Calculator {
                 false
             }
         }
+        private var movedBackHappened = false
         fun moveBack(): Boolean {
             return if (chunkPointer == 2) {
+                movedBackHappened = true
                 chunkPointer -= 2
                 Log.d("CUSTOM", "MOVED BACK!")
                 true
@@ -175,7 +179,7 @@ class Calculator {
 
         // calls a computeBuffer for what's inside the parenthesis after removing them so that
         // in computeBuffer we don't have to worry about processing parenthesis
-        private fun computeInsideParenthesisFirst(operationBuffer: MutableList<OperationToken>) {
+        /*private fun computeInsideParenthesisFirst(operationBuffer: MutableList<OperationToken>) {
             operationBuffer.forEach {
                 if (it is Parenthesis && (it as Parenthesis).open) {
                     operationBuffer.remove(it)
@@ -192,11 +196,8 @@ class Calculator {
                     operationBuffer.remove(it) // discards it if first is )
                 }
             }
-        }
+        }*/
 
-        fun computeBufferToString(operationBuffer: MutableList<OperationToken>): String? {
-            return computeBuffer(operationBuffer)?.let { Number.parseNumberToString(it) }
-        }
         val history: MutableList<OperationToken> = mutableListOf()
         fun getHistory(): String? {
             return if (history.isNotEmpty()) {
@@ -205,8 +206,8 @@ class Calculator {
                     if (it is OrderedToken) {
                         parsedHistory.append(it.symbol)
                     } else if (it is Number) {
-                        parsedHistory.append(Number.parseNumberToString(it.num))
-                        if (it.isResult) {
+                        parsedHistory.append(it.parseToString())
+                        if (it is Result) {
                             parsedHistory.append("; ")
                         }
                     }
@@ -215,6 +216,21 @@ class Calculator {
             } else {
                 null
             }
+        }
+
+        // last: 2+3x3x
+        // buffer: 2+9x >rem.> 2+
+        // history: 2+3x3x >rem.> 2+3x3
+        // buffer + history(last3) = 2+3x3
+        // +newOp 2+3x3+ >compute> 11+
+        fun unDo() {
+            operationBuffer.removeLast()
+            operationBuffer.removeLast()
+            history.removeLast()
+            val lastSavedIndex = history.lastIndex
+            operationBuffer.add(history.get(lastSavedIndex - 2)) // prev. number
+            operationBuffer.add(history.get(lastSavedIndex - 1)) // prev. op
+            operationBuffer.add(history.get(lastSavedIndex)) // prev. number
         }
     }
 }
