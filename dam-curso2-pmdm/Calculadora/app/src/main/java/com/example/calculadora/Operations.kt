@@ -1,10 +1,15 @@
 package com.example.calculadora
 
 import android.util.Log
+import kotlin.math.pow
 
 interface OperationToken {}
 interface Calculation : OrderedToken {
     fun calculate(firstOperand: Double, secondOperand: Double): Double
+}
+
+interface SingleOperandCalculation : OrderedToken {
+    fun calculate(opValue: Double): Double
 }
 
 interface OrderedToken : OrderOfOperations, OperationToken {
@@ -61,6 +66,22 @@ class Product() : Calculation {
     override fun calculate(firstOperand: Double, secondOperand: Double): Double = firstOperand * secondOperand
 }
 
+class Exponentiation() : Calculation {
+    override val symbol: String = "^"
+    override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.EXPONENTIATION
+    override fun calculate(firstOperand: Double, secondOperand: Double): Double = firstOperand * secondOperand
+}
+class PowerOf(val powerValue: Double) : SingleOperandCalculation {
+    override val symbol: String = "^2"
+    override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.EXPONENTIATION
+    override fun calculate(opValue: Double): Double = opValue.pow(powerValue)
+}
+class Sin() : SingleOperandCalculation {
+    override val symbol: String = "sin"
+    override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.EXPONENTIATION
+    override fun calculate(opValue: Double): Double = Math.sin(opValue)
+}
+
 class Equal() : OrderedToken {
     override val symbol: String = "="
     override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.EQUAL
@@ -81,101 +102,165 @@ class Calculator {
         // mine: 2 + 3 x 3 x (display 9) + 1 (missing display update) = 11
         // mine: 2 + 3 x 3 + (display 11) 1 = 12
 
+        private var token1: OperationToken? = null
+        private var token2: OperationToken? = null
+        private var token3: OperationToken? = null
+        private var token4: OperationToken? = null
+        private fun moveAndRefresh(moveAhead: Boolean): Boolean {
+            if (moveAhead && operationBuffer.size > 4) {
+                Log.d("CUSTOM", "MOVED AHEAD!")
+                chunkPointer += 2
+                return true
+            } else if (!moveAhead && chunkPointer == 2) {
+                android.util.Log.d("CUSTOM", "MOVED BACK!")
+                chunkPointer -= 2
+                return true
+            }
+            refreshChunkHead()
+            return false
+        }
+
+        private fun refreshChunkHead() {
+            token1 = operationBuffer.getOrNull(chunkPointer)
+            token2 = operationBuffer.getOrNull(chunkPointer + 1)
+            token3 = operationBuffer.getOrNull(chunkPointer + 2)
+            token4 = operationBuffer.getOrNull(chunkPointer + 3)
+        }
+
         fun computeBuffer(): Number? {
             Log.d("CUSTOM", "ENTERED computeBufer(), size: ${operationBuffer.size}")
             operationBuffer.forEach {
                 Log.d("CUSTOM", "<insideBuffer: ${it.javaClass.simpleName} >")
             }
 
-            // TODO computeInsideParenthesisFirst(operationBuffer) WIP
-            while (operationBuffer.size > 3) { // minimum computable chunk: X op X op2
-                val firstNum = (operationBuffer[chunkPointer] as Number)
-                Log.d("CUSTOM", "NUM1: ${firstNum.value}")
-                val firstOp = (operationBuffer[chunkPointer + 1] as Calculation)
-                Log.d("CUSTOM", "OP1: ${firstOp.javaClass.simpleName} & PRIORITY: ${firstOp.priority}")
-                val secondNum = (operationBuffer[chunkPointer + 2] as Number)
-                Log.d("CUSTOM", "NUM2: ${secondNum.value}")
-                val secondOp = (operationBuffer[chunkPointer + 3] as OrderedToken)
-                Log.d("CUSTOM", "OP2: ${secondOp.javaClass.simpleName} & PRIORITY: ${secondOp.priority}")
-
-
-                if (firstOp.priority.value < secondOp.priority.value) { // if second op. is higher order...
-                    // ie: >2 + 3 x<
-                    if (moveAhead(operationBuffer)) { // see what's ahead (to group higher order op. with next number and compute that first)
-                        Log.d("CUSTOM", "CONTINUE 1: SEE WHAT'S AHEAD") // ie >2 + 3 x< ...?? maybe "x 4 -" *
-                        continue
-                    } else { // nothing ahead; keep showing last number and keep waiting for more numbers; there isn't a result or update to provide
-                        Log.d("CUSTOM", "RETURN 0: NOTHING TO DO YET. WAITING for next number+op.")
-                        return Number(secondNum.value) // ** (see CASE3 below)
-                    }
-                } else if (firstOp.priority.value >= secondOp.priority.value) { // if second op. is same or lower order, compute this chunk
-                    // here first or * after moving ahead: 2 + >3 x 4 -<
-                    // computes operation >3x4 -< and updates the buffer >12 - _<
-                    val newFirstNum: Number = Number(firstOp.calculate(firstNum.value, secondNum.value))
-                    operationBuffer.set(operationBuffer.indexOf(firstNum), newFirstNum)
-                    operationBuffer.remove(firstOp)
-                    operationBuffer.remove(secondNum)
-                    // NOW 3 THINGS CAN HAPPEN
-                    if (chunkPointer == 0) { //
-                        if (secondOp is Equal) {
-                            // CASE 1: if NOT looking ahead AND secondOp is Equal... THIS IS END OF THE BUFFER
-                            operationBuffer.clear() // clears it and then returns the final result after the if
-                            val result = Result(newFirstNum.value)
-                            history.add(result)
-                            Log.d("CUSTOM", "RETURN 1: Computed LAST chunk (EQUAL) and cleared the buffer. FINAL RESULT.")
-                            return result
-                        } else { //
-                            // CASE 2: if NOT looking and secondOp is not Equal -> uncompleted block >2 - _<
-                            Log.d("CUSTOM", "RETURN 2: Computed base chunk (op.A>op.B). NEED more number+op. to compute more.")
-                            // returns the update for the display and keeps waiting for next number to compute the operation (in the example '-')
-                            return Number(newFirstNum.value)
-                        }
-                     } else if (moveBack()) {
-                        // CASE 3: we're looking ahead & moveBack gets executed
-                        // we'd be back to previous chunk >firstNum(prev.) firstOp(prev.) secondNum(this.firstNum) secondOp(this.secondOp)<;
-                         // ** notice that the 'update' to the computed operation would get returned in there
-                        Log.d("CUSTOM", "CONTINUE 2: Computed chunk ahead (op.A>op.B) and moved back.")
-                        continue
+            for ((i, operation) in operationBuffer.withIndex()) {
+                if (operation is SingleOperandCalculation) {
+                    val precedingNumber = (operationBuffer.getOrNull(i - 1) as? Number) ?: null
+                    precedingNumber?.let {
+                        precedingNumber.value = operation.calculate(precedingNumber.value)
+                        operationBuffer.remove(operation)
+                        Log.d("CUSTOM", "APPLIED SingleOperandCalculation")
                     }
                 }
             }
 
-            // prevents a final operation with no effect (ie >2 = _<) from filling the buffer (logic breaking)
-            if (operationBuffer[1] is Equal && operationBuffer[0] is Number) {
-                Log.d("CUSTOM", "RETURN 3: Computed meaningless op. + cleared the buffer ")
-                val meaninglessResult = (operationBuffer[0] as Result)
+            refreshChunkHead()
+            // TODO computeInsideParenthesisFirst(operationBuffer) WIP
+
+            // 2+>3x+9<
+            if (token1 is Number && token2 is Calculation && token3 is Number && token4 is OrderedToken) {
+                while (operationBuffer.size > 3) { // minimum computable chunk: X op X op2
+                    refreshChunkHead()
+                    val firstNum = token1 as Number
+                    val firstOp = token2 as Calculation
+                    val secondNum = token3 as Number
+                    val secondOp = token4 as OrderedToken
+
+                    Log.d("CUSTOM", "NUM1: ${firstNum.value}")
+                    Log.d(
+                        "CUSTOM",
+                        "OP1: ${firstOp.javaClass.simpleName} & PRIORITY: ${firstOp.priority}"
+                    )
+                    Log.d("CUSTOM", "NUM2: ${secondNum.value}")
+                    Log.d(
+                        "CUSTOM",
+                        "OP2: ${secondOp.javaClass.simpleName} & PRIORITY: ${secondOp.priority}"
+                    )
+
+                    if (firstOp.priority.value < secondOp.priority.value) { // if second op. is higher order...
+                        Log.d("CUSTOM", "PRIORITY < PRIORITY")
+                        // ie: >2 + 3 x<
+                        if (moveAndRefresh(true)) { // see what's ahead (to group higher order op. with next number and compute that first)
+                            Log.d(
+                                "CUSTOM",
+                                "CONTINUE 1: SEE WHAT'S AHEAD"
+                            ) // ie >2 + 3 x< ...?? maybe "x 4 -" *
+                            if (token4 == null) {
+                                Log.d(
+                                    "CUSTOM",
+                                    "CONTROL: BREAK"
+                                )
+                                val result = Number((token3 as Number).value)
+                                history.add(result)
+                                return Result(result.value)
+                            } else {
+                                continue
+                            }
+                        } else { // nothing ahead; keep showing last number and keep waiting for more numbers; there isn't a result or update to provide
+                            Log.d(
+                                "CUSTOM",
+                                "RETURN 0: NOTHING TO DO YET. WAITING for next number+op."
+                            )
+                            return Number(secondNum.value) // ** (see CASE3 below)
+                        }
+                    } else if (firstOp.priority.value >= secondOp.priority.value) { // if second op. is same or lower order, compute this chunk
+                        Log.d("CUSTOM", "PRIORITY >= PRIORITY")
+                        // here first or * after moving ahead: 2 + >3 x 4 -<
+                        // computes operation >3x4 -< and updates the buffer >12 - _<
+                        val newFirstNum: Number =
+                            Number(firstOp.calculate(firstNum.value, secondNum.value))
+                        operationBuffer[operationBuffer.indexOf(firstNum)] = newFirstNum
+                        operationBuffer.remove(firstOp)
+                        operationBuffer.remove(secondNum)
+                        Log.d("CUSTOM", "CONTROL CHECK")
+                        // NOW 3 THINGS CAN HAPPEN
+                        if (chunkPointer == 0) { //
+                            if (secondOp is Equal) {
+                                // CASE 1: if NOT looking ahead AND secondOp is Equal... THIS IS END OF THE BUFFER
+                                operationBuffer.clear() // clears it and then returns the final result after the if
+                                val result = Result(newFirstNum.value)
+                                history.add(result)
+                                Log.d(
+                                    "CUSTOM",
+                                    "RETURN 1: Computed LAST chunk (EQUAL) and cleared the buffer. FINAL RESULT."
+                                )
+                                return result
+                            } else { //
+                                // CASE 2: if NOT looking and secondOp is not Equal -> uncompleted block >2 - _<
+                                Log.d(
+                                    "CUSTOM",
+                                    "RETURN 2: Computed base chunk (op.A>op.B). NEED more number+op. to compute more."
+                                )
+                                // returns the update for the display and keeps waiting for next number to compute the operation (in the example '-')
+                                return Number(newFirstNum.value)
+                            }
+                        } else if (moveAndRefresh(false)) {
+                            // CASE 3: we're looking ahead & moveBack gets executed
+                            // we'd be back to previous chunk >firstNum(prev.) firstOp(prev.) secondNum(this.firstNum) secondOp(this.secondOp)<;
+                            // ** notice that the 'update' to the computed operation would get returned in there
+                            Log.d(
+                                "CUSTOM",
+                                "CONTINUE 2: Computed chunk ahead (op.A>op.B) and moved back."
+                            )
+                            continue
+                        }
+                    }
+                }
+
+            } else if (token1 is Number && token2 is Calculation && token3 is Number) {
+                moveAndRefresh(false)
+                Log.d("CUSTOM", "RETURN 0: NOTHING TO DO YET. WAITING for next operation...")
+                history.add(token3 as Number)
+                operationBuffer.remove(token3)
+                return Result((token3 as Number).value) // count as next number
+            } else if (token1 is Number && token2 is Equal) {
+                Log.d("CUSTOM", "RETURN 3: Computed meaningless op. + cleared the buffer")
                 val lastIndex = history.lastIndex
                 history.removeAt(lastIndex)
                 history.removeAt(lastIndex - 1)
                 operationBuffer.clear()
-                return meaninglessResult
+                return Result((token1 as Number).value)
+            } else if (token1 is Number && token2 == null) {
+                Log.d("CUSTOM", "RETURN 4: Computed SingleOperandCalculation update + cleared the buffer")
+                val result = Result((token1 as Number).value)
+                operationBuffer.clear()
+                history.add(result)
+                return result
             }
-
             Log.d("CUSTOM", "RETURN NULL: Not enough op. in the buffer to compute anything... ")
             return null
         }
 
-        fun moveAhead(operationBuffer: MutableList<OperationToken>): Boolean {
-            return if (operationBuffer.size > 4) {
-                movedBackHappened = true
-                chunkPointer += 2
-                Log.d("CUSTOM", "MOVED AHEAD!")
-                true
-            } else {
-                false
-            }
-        }
-        private var movedBackHappened = false
-        fun moveBack(): Boolean {
-            return if (chunkPointer == 2) {
-                movedBackHappened = true
-                chunkPointer -= 2
-                Log.d("CUSTOM", "MOVED BACK!")
-                true
-            } else {
-                false
-            }
-        }
 
         // calls a computeBuffer for what's inside the parenthesis after removing them so that
         // in computeBuffer we don't have to worry about processing parenthesis
@@ -202,16 +287,28 @@ class Calculator {
         fun getHistory(): String? {
             return if (history.isNotEmpty()) {
                 val parsedHistory: StringBuilder = StringBuilder()
-                history.forEach {
-                    if (it is OrderedToken) {
-                        parsedHistory.append(it.symbol)
-                    } else if (it is Number) {
-                        parsedHistory.append(it.parseToString())
-                        if (it is Result) {
+
+                for ((i, token) in history.withIndex()) {
+                    if (token is OrderedToken) {
+                        parsedHistory.append(token.symbol)
+                        if (token is SingleOperandCalculation) {
+                            parsedHistory.append("=]")
+                        }
+                    } else if (token is Number) {
+                        if (history.getOrNull(i + 1) is SingleOperandCalculation) {
+                            parsedHistory.append("[")
+                        }
+                        parsedHistory.append(token.parseToString())
+                        if (token is Result) {
                             parsedHistory.append("; ")
                         }
                     }
                 }
+
+                history.forEach {
+
+                }
+
                 parsedHistory.toString()
             } else {
                 null

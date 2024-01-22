@@ -69,11 +69,13 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 Calculator.history.clear()
             }
             binding.buttonTest2.id -> {
-                // Calculator.unDo()
+                loadOperation(Sin())
             }
-            binding.buttonTest3.id -> {}
+            binding.buttonTest3.id -> {
+                loadOperation(Exponentiation())
+            }
             binding.buttonTest4.id -> {
-                loadOperation(Product(), Number(5.0))
+                loadOperation(PowerOf(2.toDouble()))
             }
         }
     }
@@ -89,7 +91,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     var numberCreationInProcess = false
 
-    private fun loadOperation(vararg setOperations: OperationToken) {
+    private fun loadOperation(setOperation: OperationToken) {
         Log.d("CUSTOM", "IN loadOperation() operationBuffer.size: ${Calculator.operationBuffer.size}")
 
         if (numberCreationInProcess) {
@@ -97,13 +99,11 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             numberCreationInProcess = false
             digits.clear()
             Calculator.operationBuffer.add(frozenNumber)
-            Calculator.history.add(frozenNumber)
-            setOperations.forEach {
-                Calculator.operationBuffer.add(it)
-                Calculator.history.add(it)
-            }
+            Calculator.history.add(Number(frozenNumber.value))
+            Calculator.operationBuffer.add(setOperation)
+            Calculator.history.add(setOperation)
         } else {
-            val lastOpInBuffer = Calculator.operationBuffer.last()
+            /* val lastOpInBuffer = Calculator.operationBuffer.last()
             if (setOperations.size == 1) {
                 val newOpToLoad = setOperations.first()
                 if (newOpToLoad is Equal) {
@@ -115,7 +115,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                     Calculator.operationBuffer.add(newOpToLoad)
                     Calculator.history.add(newOpToLoad)
                 }
-            }
+            }*/
         }
 
         val resultProvided = Calculator.computeBuffer()
@@ -124,6 +124,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             // allows a final result to work as a new number if the user decides to operate on it:
             numberCreationInProcess = it is Result
         }
+        Log.d("CUSTOM", "OUT OF... loadOperation() operationBuffer.size: ${Calculator.operationBuffer.size}")
 
         val historyProvided = Calculator.getHistory()
         historyProvided?.let {
