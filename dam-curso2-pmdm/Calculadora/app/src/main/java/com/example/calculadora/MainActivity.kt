@@ -98,38 +98,22 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             val frozenNumber = parseScreen()
             numberCreationInProcess = false
             digits.clear()
-            Calculator.operationBuffer.add(frozenNumber)
             Calculator.history.add(Number(frozenNumber.value))
-            Calculator.operationBuffer.add(setOperation)
             Calculator.history.add(setOperation)
-        } else {
-            /* val lastOpInBuffer = Calculator.operationBuffer.last()
-            if (setOperations.size == 1) {
-                val newOpToLoad = setOperations.first()
-                if (newOpToLoad is Equal) {
-                    Calculator.operationBuffer.set(Calculator.operationBuffer.lastIndex, newOpToLoad)
-                    Calculator.history.set(Calculator.history.lastIndex, newOpToLoad)
-                } else if (newOpToLoad != lastOpInBuffer) {
-                    Log.d("CUSTOM", "TRICKY CASE")
-                    Calculator.unDo()
-                    Calculator.operationBuffer.add(newOpToLoad)
-                    Calculator.history.add(newOpToLoad)
-                }
-            }*/
         }
 
-        val resultProvided = Calculator.computeBuffer()
+        val resultProvided = Calculator.computeBuffer(Calculator.getBuffer())
         resultProvided?.let {
             refreshDisplay(resultProvided.parseToString())
             // allows a final result to work as a new number if the user decides to operate on it:
-            numberCreationInProcess = it is Result
+            numberCreationInProcess = it is Number
         }
         Log.d("CUSTOM", "OUT OF... loadOperation() operationBuffer.size: ${Calculator.operationBuffer.size}")
 
-        val historyProvided = Calculator.getHistory()
+        /* val historyProvided = Calculator.getHistory()
         historyProvided?.let {
             refreshSecondaryDisplay(it)
-        }
+        } */
     }
 
     private fun parseScreen(): Number {
