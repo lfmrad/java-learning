@@ -65,7 +65,6 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
                 digits.clear()
                 clearMainDisplay()
                 clearSecondaryDisplay()
-                Calculator.operationBuffer.clear()
                 Calculator.history.clear()
             }
             binding.buttonTest2.id -> {
@@ -90,30 +89,44 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     var numberCreationInProcess = false
-
     private fun loadOperation(setOperation: OperationToken) {
-        Log.d("CUSTOM", "IN loadOperation() operationBuffer.size: ${Calculator.operationBuffer.size}")
+        Log.d("CUSTOM", "IN loadOperation()")
 
-        if (numberCreationInProcess) {
-            val frozenNumber = parseScreen()
-            numberCreationInProcess = false
-            digits.clear()
+        val frozenNumber = parseScreen()
+        digits.clear()
+
+        val lastTokenInHistory = Calculator.history.lastOrNull()
+        if (numberCreationInProcess || Calculator.history.isEmpty()) {
+            Log.d("CUSTOM", "loadOp() CASE 1")
+            // + OR _ & user has entered a number
             Calculator.history.add(Number(frozenNumber.value))
+            Calculator.history.add(setOperation)
+            numberCreationInProcess = false
+        } else if (lastTokenInHistory is Calculation) {
+            // CHANGE OF MIND
+            Log.d("CUSTOM", "loadOp() CASE; CHANGE OF MIND")
+            Calculator.history.set(Calculator.history.indexOf(lastTokenInHistory), setOperation)
+        } else if (lastTokenInHistory is Result && !numberCreationInProcess) {
+            Log.d("CUSTOM", "loadOp() CASE 2")
+            // =2 && user hasn't overwritten the output
+            Calculator.history.add(Number(lastTokenInHistory.value))
+            Calculator.history.add(setOperation)
+        } else if (lastTokenInHistory is Number || lastTokenInHistory is SingleOperandCalculation) {
+            Log.d("CUSTOM", "loadOp() CASE 3")
             Calculator.history.add(setOperation)
         }
 
-        val resultProvided = Calculator.computeBuffer(Calculator.getBuffer())
+        val resultProvided = Calculator.computeBuffer(Calculator.getBufferFromLastResult())
         resultProvided?.let {
             refreshDisplay(resultProvided.parseToString())
-            // allows a final result to work as a new number if the user decides to operate on it:
-            numberCreationInProcess = it is Number
         }
-        Log.d("CUSTOM", "OUT OF... loadOperation() operationBuffer.size: ${Calculator.operationBuffer.size}")
 
-        /* val historyProvided = Calculator.getHistory()
+        val historyProvided = Calculator.getHistory()
         historyProvided?.let {
             refreshSecondaryDisplay(it)
-        } */
+        }
+
+        Log.d("CUSTOM", "OUT OF... loadOperation()")
     }
 
     private fun parseScreen(): Number {
@@ -143,7 +156,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             true
         } else {
             // TODO must clear from history as well or it will mess it up
-            Calculator.operationBuffer.clear()
+            Calculator.history.clear()
             false
         }
     }

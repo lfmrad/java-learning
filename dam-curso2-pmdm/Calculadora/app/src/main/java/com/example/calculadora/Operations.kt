@@ -18,7 +18,6 @@ interface OrderedToken : OrderOfOperations, OperationToken {
 }
 
 open class Number(var value: Double = 0.0) : OperationToken {
-    var tag = 0
     // TODO property to handle self applying operations such as sin, tan, fact, etc. + interface to provide a method to compute them
     // ie MetaCalculation : Calculation; Number(new MetaCalculation to apply); number.computeMeta etc etc
     constructor(textToParse: String) : this(parseStringToNumber(textToParse))
@@ -96,117 +95,135 @@ class Parenthesis(val open: Boolean) : OrderedToken {
 
 class Calculator {
     companion object {
-        val operationBuffer: MutableList<OperationToken> = mutableListOf()
+        private fun readChunk(i: Int, operationBuffer: MutableList<OperationToken>): MutableList<OperationToken?> {
+            // Log.d("CUSTOM", "...reading chunk")
+            // Log.d("CUSTOM", "readChunk: CREATING")
+            val chunk: MutableList<OperationToken?> = mutableListOf()
+            chunk.add(operationBuffer.getOrNull(i))
+            chunk.add(operationBuffer.getOrNull(i + 1))
+            chunk.add(operationBuffer.getOrNull(i + 2))
+            chunk.add(operationBuffer.getOrNull(i + 3))
+            chunk.forEach {
+                // it?.let { Log.d("CUSTOM", "<insideReadChunk: ${it.javaClass.simpleName} >") }
+            }
+            return chunk
+        }
         fun computeBuffer(operationBuffer: MutableList<OperationToken>): Number? {
             Log.d("CUSTOM", ">> ENTERED computeBuffer()")
             Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
             operationBuffer.forEach {
                 Log.d("CUSTOM", "<insideOperationBuffer: ${it.javaClass.simpleName} >")
             }
-            var token1: OperationToken? = null
-            var token2: OperationToken? = null
-            var token3: OperationToken? = null
-            var token4: OperationToken? = null
-            while (operationBuffer.size > 2) {
-                for (i in operationBuffer.indices) {
-                    token1 = operationBuffer.getOrNull(i)
-                    token2 = operationBuffer.getOrNull(i + 1)
-                    token3 = operationBuffer.getOrNull(i + 2)
-                    token4 = operationBuffer.getOrNull(i + 3)
-                    if (token1 != null) {
-                        Log.d("CUSTOM", "<token1: ${token1.javaClass.simpleName} >")
-                    }
-                    if (token2 != null) {
-                        Log.d("CUSTOM", "<token2: ${token2.javaClass.simpleName} >")
-                    }
-                    if (token3 != null) {
-                        Log.d("CUSTOM", "<token3: ${token3.javaClass.simpleName} >")
-                    }
-                    if (token4 != null) {
-                        Log.d("CUSTOM", "<token4: ${token4.javaClass.simpleName} >")
-                    }
+            var tokens: MutableList<OperationToken?> = mutableListOf()
+            // applies SingleOperandCalculations first to buffer
 
-                    // applies SingleOperandCalculations first
-                    if (token1 is Number && token2 is SingleOperandCalculation) {
-                        val precedingNumber = token1 as Number
-                        val singleOpCalc = token2 as SingleOperandCalculation
+            // applySingleOperandCalculationsFirst(operationBuffer)
+            // 2+3^2+2=
+            //
+            while (operationBuffer.isNotEmpty()) {
+                Log.d("CUSTOM", "STEP 2: Reducing buffer to final operation.")
+                for (i in operationBuffer.indices) {
+                    tokens = readChunk(i, operationBuffer)
+                    val singleOpCalc = tokens.firstOrNull { it is SingleOperandCalculation } as? SingleOperandCalculation
+                    if (singleOpCalc != null) {
+                        val precedingNumber = tokens[tokens.indexOf(singleOpCalc) - 1] as Number
                         val result = singleOpCalc.calculate(precedingNumber.value)
                         Log.d("CUSTOM", "CONTINUE; CALCULATION: SingleOperandCalculation <${precedingNumber.value}${singleOpCalc.symbol}=$result>")
                         precedingNumber.value = result
-                        operationBuffer.remove(token2)
+                        operationBuffer.remove(singleOpCalc)
                         Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
-                        continue
-                    } else if (token1 is OrderedToken && token2 is OrderedToken) {
-                        // only last operation prevails (ie change of mind): (+,=) -> (=), (+,sin) -> sin, etc
-                        val prevOp = token1 as OrderedToken
-                        val nextOp = token2 as OrderedToken
-                        Log.d("CUSTOM", "CONTINUE; Change of operation: ${prevOp.symbol},${nextOp.symbol} -> ${nextOp.symbol} ")
-                        operationBuffer.remove(prevOp)
-                        Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
-                        continue
-                    } else if (token1 is Number && token2 is Calculation && token3 is Number) {
+                    } else if (tokens[0] is Number && tokens[1] is Calculation && tokens[2] is Number) {
                         // process calculations according to priority
                         // any of: 2+3x, 2x3+, 3x2(=/empty) (before... 2+3x
-                        val firstOperand = token1 as Number
-                        val firstCalc = token2 as Calculation
-                        val secondOperand = token3 as Number
-                        if (token4 is Calculation) {
-                            var secondCalc = token4 as Calculation
-                            if (firstCalc.priority.value < secondCalc.priority.value) { // 2+3x -> 3x...?
+                        // 2+3x -> +3x -> 3x
+                        val firstOperand = tokens[0] as Number
+                        val firstCalc = tokens[1] as Calculation
+                        val secondOperand = tokens[2] as Number
+                        if (tokens[3] is Calculation) {
+                            val secondCalc = tokens[3]  as Calculation
+                            if (firstCalc.priority.value < secondCalc.priority.value) {
                                 Log.d("CUSTOM", "CONTINUE; (LOOK AHEAD); DID NOTHING; CASE: number1,op1,number1,op2 where op1<op2")
                                 Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
                                 continue
                             } else if (firstCalc.priority.value >= secondCalc.priority.value) { // 2x3x -> 6x
-                                var result = firstCalc.calculate(firstOperand.value, secondOperand.value)
-                                Log.d("CUSTOM", "CONTINUE; CALCULATION: <${firstOperand.value}${firstCalc.symbol}${secondOperand.value}${secondCalc.symbol}\$=$result${secondCalc.symbol}\$>")
+                                val result = firstCalc.calculate(firstOperand.value, secondOperand.value)
+                                Log.d("CUSTOM", "CONTINUE; CALCULATION (4tokens): <${firstOperand.value}${firstCalc.symbol}${secondOperand.value}${secondCalc.symbol}=$result${secondCalc.symbol}>")
                                 firstOperand.value = result
-                                operationBuffer.remove(token2)
-                                operationBuffer.remove(token3)
-                                Log.d("CUSTOM", "CONTINUE; CALCULATION: number1,op1,number1,op2 where op1>=op2")
+                                operationBuffer.remove(tokens[1])
+                                operationBuffer.remove(tokens[2])
                                 Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
-                                continue
+                                break
                             }
                         } else {
                             val result = firstCalc.calculate(firstOperand.value, secondOperand.value) // 2x3 -> 6=
-                            Log.d("CUSTOM", "CONTINUE; CALCULATION: <${firstOperand.value}${firstCalc.symbol}${secondOperand.value}=$result>")
+                            Log.d("CUSTOM", "CONTINUE; CALCULATION (3tokens): <${firstOperand.value}${firstCalc.symbol}${secondOperand.value}=$result>")
                             firstOperand.value = result
-                            firstOperand.tag = 1
-                            operationBuffer.remove(token2)
-                            operationBuffer.remove(token3)
+                            operationBuffer.remove(tokens[1])
+                            operationBuffer.remove(tokens[2])
                             Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
-                            continue
+                            break
                         }
+                    } else if (tokens[0] is Number && tokens[1] is Equal) { // FINAL RESULT, BREAKS LOOP
+                        val finalResult = Result((tokens[0] as Number).value)
+                        Log.d("CUSTOM", "<< EXIT computerBuffer: RETURN VALUE **finalResult** <${finalResult.value}${(tokens[1] as Equal).symbol}${finalResult.value}>")
+                        Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
+                        history.add((finalResult))
+                        operationBuffer.clear()
+                        return finalResult
+                    } else if (tokens[0] is Number && tokens[1] is Calculation) { // FROM HERE: ONLY HAPPENS WHEN operationBuffer.size == 2
+                        // 2+ -> missing more op.
+                        val update = tokens[0] as Number
+                        val op = tokens[1] as Calculation
+                        Log.d("CUSTOM", "<< EXIT computerBuffer: RETURN VALUE UPDATE <${update.value}+${op.symbol}> (Requires more numbers...)")
+                        Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
+                        operationBuffer.clear()
+                        return update // requires more op.
+                    } else if (tokens[0] is Number && tokens[1] == null) { // FROM HERE: ONLY HAPPENS WHEN operationBuffer.size == 1
+                        val update = tokens[0] as Number
+                        Log.d("CUSTOM", "<< EXIT computerBuffer: RETURN VALUE UPDATE < <${update.value} ...?> (Requires more op....)")
+                        Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
+                        operationBuffer.clear()
+                        return update // requires more op.
+                    } else if (tokens[0] is OrderedToken && tokens[1] == null) {
+                        val op = tokens[0] as OrderedToken
+                        Log.d("CUSTOM", "<< EXIT computerBuffer: RETURN NULL <${op.symbol} ...?>")
+                        Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
+                        operationBuffer.clear()
+                        return null // requires more numbers
                     }
                 }
-            }
-
-            if (token1 is Number && token2 is Calculation) { // FROM HERE: ONLY HAPPENS WHEN operationBuffer.size == 2
-                // 2+ -> missing more op.
-                Log.d("CUSTOM", "<< EXIT computerBuffer: RETURN NULL <number+op>")
-                Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
-                operationBuffer.clear()
-                return null // requires more numbers
-            } else if (token1 is Number && token2 is Equal) { // FINAL RESULT, BREAKS LOOP
-                val finalResult = token1 as Number
-                Log.d("CUSTOM", "<< EXIT computerBuffer: RETURN VALUE **finalResult** <${finalResult.value}${token2.symbol}${finalResult.value}>")
-                Log.d("CUSTOM", "CHECK: tag: ${finalResult.tag}")
-                Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
-                operationBuffer.clear()
-                return Result(finalResult.value)
-            } else if (token1 is Number && token2 == null) { // FROM HERE: ONLY HAPPENS WHEN operationBuffer.size == 1
-                Log.d("CUSTOM", "<< EXIT computerBuffer: RETURN NULL <number ...?>")
-                Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
-                operationBuffer.clear()
-                return token1 // requires more op.
-            } else if (token1 is OrderedToken && token2 == null) {
-                Log.d("CUSTOM", "<< EXIT computerBuffer: RETURN NULL <op ...?>")
-                Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
-                operationBuffer.clear()
-                return null // requires more numbers
             }
             Log.d("CUSTOM", "<< EXIT computerBuffer: RETURN MAIN NULL")
             Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
             return null
+        }
+
+        /* TO HISTORY:
+        if (tokens[0] is OrderedToken && tokens[1] is OrderedToken) {
+                        // only last operation prevails (ie change of mind): (+,=) -> (=), (+,sin) -> sin, etc
+                        val prevOp = tokens[0] as OrderedToken
+                        val nextOp = tokens[1] as OrderedToken
+                        Log.d("CUSTOM", "CONTINUE; Change of operation: ${prevOp.symbol},${nextOp.symbol} -> ${nextOp.symbol} ")
+                        operationBuffer.remove(prevOp)
+                        Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
+         */
+
+        private fun applySingleOperandCalculationsFirst(operationBuffer: MutableList<OperationToken>): Boolean {
+            var someApplied = false
+            for (i in operationBuffer.indices) {
+                val tokens = readChunk(i, operationBuffer)
+                if (tokens[0] is Number && tokens[1] is SingleOperandCalculation) {
+                    val precedingNumber = tokens[0] as Number
+                    val singleOpCalc = tokens[1] as SingleOperandCalculation
+                    val result = singleOpCalc.calculate(precedingNumber.value)
+                    Log.d("CUSTOM", "CONTINUE; CALCULATION: SingleOperandCalculation <${precedingNumber.value}${singleOpCalc.symbol}=$result>")
+                    precedingNumber.value = result
+                    operationBuffer.remove(tokens[1])
+                    Log.d("CUSTOM", "[operationBuffer.size: ${operationBuffer.size}\"]")
+                    someApplied = true
+                }
+            }
+            return someApplied
         }
 
         // calls a computeBuffer for what's inside the parenthesis after removing them so that
@@ -239,7 +256,7 @@ class Calculator {
                     if (token is OrderedToken) {
                         parsedHistory.append(token.symbol)
                         if (token is SingleOperandCalculation) {
-                            parsedHistory.append("=]")
+                            parsedHistory.append("]")
                         }
                     } else if (token is Number) {
                         if (history.getOrNull(i + 1) is SingleOperandCalculation) {
@@ -261,13 +278,20 @@ class Calculator {
             }
         }
 
-        fun getBuffer(): MutableList<OperationToken> {
+        fun getBufferFromLastResult(): MutableList<OperationToken> {
             val operationBuffer: MutableList<OperationToken> = mutableListOf()
-            history.forEach {
-                if (it is Number) {
-                    operationBuffer.add(Number(it.value))
-                } else {
-                    operationBuffer.add(it)
+            if (history.isNotEmpty()) {
+                var startingIndex: Int = 0
+                val lastResult = history.lastOrNull() { it is Result } as? Result
+                lastResult?.let {  startingIndex = history.indexOf(it) }
+                // Log.d("CUSTOM", "HISTORY STARTING INDEX: $startingIndex")
+                history.subList(startingIndex, history.size).forEach {
+                    if (it is Number) {
+                        operationBuffer.add(Number(it.value))
+                    } else {
+                        operationBuffer.add(it)
+                    }
+                    // Log.d("CUSTOM", "HISTORY SUBLIST SIZE: ${operationBuffer.size}")
                 }
             }
             return operationBuffer
@@ -278,7 +302,7 @@ class Calculator {
         // history: 2+3x3x >rem.> 2+3x3
         // buffer + history(last3) = 2+3x3
         // +newOp 2+3x3+ >compute> 11+
-        fun unDo() {
+        /*fun unDo() {
             operationBuffer.removeLast()
             operationBuffer.removeLast()
             history.removeLast()
@@ -286,7 +310,7 @@ class Calculator {
             operationBuffer.add(history.get(lastSavedIndex - 2)) // prev. number
             operationBuffer.add(history.get(lastSavedIndex - 1)) // prev. op
             operationBuffer.add(history.get(lastSavedIndex)) // prev. number
-        }
+        }*/
     }
 }
 
