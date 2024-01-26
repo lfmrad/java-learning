@@ -70,7 +70,7 @@ class Product() : Calculation {
 class Exponentiation() : Calculation {
     override val symbol: String = "^"
     override val priority: OrderOfOperations.Priority = OrderOfOperations.Priority.EXPONENTIATION
-    override fun calculate(firstOperand: Double, secondOperand: Double): Double = firstOperand * secondOperand
+    override fun calculate(firstOperand: Double, secondOperand: Double): Double = firstOperand.pow(secondOperand)
 }
 class PowerOf(val powerValue: Double) : SingleOperandCalculation {
     override val symbol: String = "²"
