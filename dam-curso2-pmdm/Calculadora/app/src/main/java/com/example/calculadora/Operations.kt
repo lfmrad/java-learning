@@ -22,11 +22,11 @@ open class Number(var value: Double = 0.0) : OperationToken {
     // ie MetaCalculation : Calculation; Number(new MetaCalculation to apply); number.computeMeta etc etc
     constructor(textToParse: String) : this(parseStringToNumber(textToParse))
     fun parseToString(num: Double = value) : String {
-        return num.toInt().toString()
+        return num.toString()
     }
     companion object {
         fun parseStringToNumber(textToParse: String) : Double {
-            val parsedNumber = Integer.parseInt(textToParse).toDouble()
+            val parsedNumber = textToParse.toDouble()
             return parsedNumber
         }
     }

@@ -38,16 +38,16 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     override fun onClick(v: View?) {
         when (v?.id) {
             // NUMERIC PAD
-            binding.button0.id -> { inputNumber(0) }
-            binding.button1.id -> { inputNumber(1) }
-            binding.button2.id -> { inputNumber(2) }
-            binding.button3.id -> { inputNumber(3) }
-            binding.button4.id -> { inputNumber(4) }
-            binding.button5.id -> { inputNumber(5) }
-            binding.button6.id -> { inputNumber(6) }
-            binding.button7.id -> { inputNumber(7) }
-            binding.button8.id -> { inputNumber(8) }
-            binding.button9.id -> { inputNumber(9) }
+            binding.button0.id -> { inputNumber('0') }
+            binding.button1.id -> { inputNumber('1') }
+            binding.button2.id -> { inputNumber('2') }
+            binding.button3.id -> { inputNumber('3') }
+            binding.button4.id -> { inputNumber('4') }
+            binding.button5.id -> { inputNumber('5') }
+            binding.button6.id -> { inputNumber('6') }
+            binding.button7.id -> { inputNumber('7') }
+            binding.button8.id -> { inputNumber('8') }
+            binding.button9.id -> { inputNumber('9') }
             // OPERATIONS
             binding.buttonSum.id -> { loadOperation(Sum()) }
             binding.buttonSubtraction.id -> { loadOperation(Subtraction()) }
@@ -57,7 +57,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             binding.buttonClear.id -> { clear() }
             // OTHERS
             binding.buttonPercentage.id -> {}
-            binding.buttonDecimal.id -> {}
+            binding.buttonDecimal.id -> { inputNumber('.') }
             binding.buttonPlusMinus.id -> {}
             // TEST
             binding.buttonTest1.id -> {
@@ -82,16 +82,23 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private val digits: StringBuilder = StringBuilder()
 
 
-    private fun inputNumber(number: Int) {
-        digits.append(number.toString())
+    private fun inputNumber(number: Char) {
+        if (number == '.' && !pendingOperation) {
+            digits.append(number.toString())
+            pendingOperation = true
+        } else if (number != '.') {
+            digits.append(number.toString())
+        }
         refreshDisplay(digits.toString())
         numberCreationInProcess = true
     }
 
     var numberCreationInProcess = false
+    var pendingOperation = false
     private fun loadOperation(setOperation: OperationToken) {
-        Log.d("CUSTOM", "IN loadOperation()")
+        pendingOperation = false
 
+        Log.d("CUSTOM", "IN loadOperation()")
         val frozenNumber = parseScreen()
         digits.clear()
 
