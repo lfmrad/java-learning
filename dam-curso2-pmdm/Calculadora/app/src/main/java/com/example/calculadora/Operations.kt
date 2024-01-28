@@ -1,7 +1,9 @@
 package com.example.calculadora
 
 import android.util.Log
-import kotlin.math.absoluteValue
+import java.text.NumberFormat
+import java.text.DecimalFormat
+import java.util.Locale
 import kotlin.math.pow
 
 interface OperationToken {}
@@ -18,16 +20,33 @@ interface OrderedToken : OrderOfOperations, OperationToken {
 }
 
 open class Number(var value: Double = 0.0) : OperationToken {
-    // TODO property to handle self applying operations such as sin, tan, fact, etc. + interface to provide a method to compute them
-    // ie MetaCalculation : Calculation; Number(new MetaCalculation to apply); number.computeMeta etc etc
-    constructor(textToParse: String) : this(parseStringToNumber(textToParse))
-    fun parseToString(num: Double = value) : String {
-        return num.toString()
-    }
+    constructor(textToParse: String) : this(parseStringToNum(textToParse))
+
     companion object {
-        fun parseStringToNumber(textToParse: String) : Double {
-            val parsedNumber = textToParse.toDouble()
+        private val numberFormat = DecimalFormat("#,##0.###")
+        val decimalSeparator = ','
+        val thousandsSeparator = '.'
+        init {
+            numberFormat.maximumFractionDigits = Integer.MAX_VALUE
+            val symbols = numberFormat.decimalFormatSymbols
+            symbols.groupingSeparator = thousandsSeparator
+            symbols.decimalSeparator = decimalSeparator
+            numberFormat.decimalFormatSymbols = symbols
+        }
+
+        fun parseNumToString(num: Double) : String {
+            return numberFormat.format(num)
+        }
+        fun parseStringToNum(textToParse: String) : Double {
+            val parsedNumber = numberFormat.parse(textToParse).toDouble()
             return parsedNumber
+        }
+        fun prettifyNum(textToParse: String) : String {
+            val parsedNumber = parseStringToNum(textToParse)
+            Log.d("CUSTOM","PRETTIFIER; BEFORE: $parsedNumber")
+            val prettifiedNumber = parseNumToString(parsedNumber)
+            Log.d("CUSTOM","PRETTIFIER; AFTER: $prettifiedNumber")
+            return prettifiedNumber
         }
     }
 }
@@ -263,7 +282,7 @@ class Calculator {
                         if (history.getOrNull(i + 1) is SingleOperandCalculation) {
                             parsedHistory.append("[")
                         }
-                        parsedHistory.append(token.parseToString())
+                        parsedHistory.append(Number.parseNumToString(token.value))
                         if (token is Result) {
                             parsedHistory.append("; ")
                         }
