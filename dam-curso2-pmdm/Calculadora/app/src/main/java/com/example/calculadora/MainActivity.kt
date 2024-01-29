@@ -81,28 +81,29 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     }
 
     private val digits: StringBuilder = StringBuilder()
-
+    private var numberCreationInProcess = false
+    private var pendingOperation = false
 
     private fun inputDigit(digit: Char) {
+        // makes sure that the decimal operator can be added only once
         if (digit == Number.decimalSeparator && !pendingOperation) {
+            digits.clear()
+            digits.append(parseScreen())
             digits.append(digit)
+            refreshDisplay(digits.toString())
             pendingOperation = true
-        } else if (digit != Number.decimalSeparator) {
+        } else {
             digits.append(digit)
+            refreshDisplay(Number.prettifyNum(digits.toString()))
         }
-        refreshDisplay(Number.prettifyNum(digits.toString()))
         numberCreationInProcess = true
     }
 
-    var numberCreationInProcess = false
-    var pendingOperation = false
     private fun loadOperation(setOperation: OperationToken) {
         pendingOperation = false
-
         Log.d("CUSTOM", "IN loadOperation()")
-        val frozenNumber = parseScreen()
+        val frozenNumber = Number(parseScreen())
         digits.clear()
-
         val lastTokenInHistory = Calculator.history.lastOrNull()
         if (numberCreationInProcess || Calculator.history.isEmpty()) {
             Log.d("CUSTOM", "loadOp() CASE 1")
@@ -137,8 +138,8 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
         Log.d("CUSTOM", "OUT OF... loadOperation()")
     }
 
-    private fun parseScreen(): Number {
-        return Number(binding.mainDisplay.text.toString())
+    private fun parseScreen(): String {
+        return binding.mainDisplay.text.toString()
     }
 
     private fun refreshDisplay(input: String) {
