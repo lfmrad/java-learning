@@ -62,7 +62,7 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
             // TEST
             binding.buttonTest1.id -> {
                 numberCreationInProcess = false
-                pendingOperation = false
+                decimalSeparatorAdded = false
                 digits.clear()
                 clearMainDisplay()
                 clearSecondaryDisplay()
@@ -82,28 +82,42 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
 
     private val digits: StringBuilder = StringBuilder()
     private var numberCreationInProcess = false
-    private var pendingOperation = false
+    private var decimalSeparatorAdded = false
 
     private fun inputDigit(digit: Char) {
         // makes sure that the decimal operator can be added only once
-        if (digit == Number.decimalSeparator && !pendingOperation) {
-            digits.clear()
-            digits.append(parseScreen())
-            digits.append(digit)
-            refreshDisplay(digits.toString())
-            pendingOperation = true
-        } else {
-            digits.append(digit)
-            refreshDisplay(Number.prettifyNum(digits.toString()))
+        var nextDigit: String? = null
+        if (digit != Number.decimalSeparator) {
+            numberCreationInProcess = true
+            nextDigit = digit.toString()
+        } else if (digit == Number.decimalSeparator && !decimalSeparatorAdded) {
+            // allows to add a decimal separator to a previous result (if there is one)
+            // TODO works well but might benefit from some refactoring for clarity
+            if (!numberCreationInProcess) {
+                val numberOnTheScreen = parseScreen()
+                // if the number was already decimal; prevents adding another decimal separator
+                if (!Number.isDecimal(Number.parseStringToNum(numberOnTheScreen))) {
+                    digits.append(numberOnTheScreen)
+                    nextDigit = digit.toString()
+                    numberCreationInProcess = true
+                    decimalSeparatorAdded = true
+                }
+            } else { // generic case: when a new number is being created and the decimal hasn't not been added yet
+                nextDigit = digit.toString()
+                decimalSeparatorAdded = true
+            }
         }
-        numberCreationInProcess = true
+        nextDigit?.let {
+            digits.append(it)
+            val processedInput = Number.prettifyInput(digits.toString())
+            refreshDisplay(processedInput)
+        }
     }
 
     private fun loadOperation(setOperation: OperationToken) {
-        pendingOperation = false
+        decimalSeparatorAdded = false
         Log.d("CUSTOM", "IN loadOperation()")
-        val frozenNumber = Number(parseScreen())
-        digits.clear()
+        val frozenNumber = Number(flushScreen())
         val lastTokenInHistory = Calculator.history.lastOrNull()
         if (numberCreationInProcess || Calculator.history.isEmpty()) {
             Log.d("CUSTOM", "loadOp() CASE 1")
@@ -141,6 +155,12 @@ class MainActivity : AppCompatActivity(), View.OnClickListener {
     private fun parseScreen(): String {
         return binding.mainDisplay.text.toString()
     }
+
+    private fun flushScreen(): String {
+        digits.clear()
+        return binding.mainDisplay.text.toString()
+    }
+
 
     private fun refreshDisplay(input: String) {
         binding.mainDisplay.text = input

@@ -35,18 +35,35 @@ open class Number(var value: Double = 0.0) : OperationToken {
         }
 
         fun parseNumToString(num: Double) : String {
+            // does things like converting 1000000 into 1.000.000
             return numberFormat.format(num)
         }
-        fun parseStringToNum(textToParse: String) : Double {
-            val parsedNumber = numberFormat.parse(textToParse).toDouble()
-            return parsedNumber
+        fun parseStringToNum(numAsText: String) : Double {
+            // parses whatever is on the screen correctly:
+            // 1.000.000 back to an actual number (1000000) or 2,34 to an actual Double
+            return numberFormat.parse(numAsText).toDouble()
         }
-        fun prettifyNum(textToParse: String) : String {
-            val parsedNumber = parseStringToNum(textToParse)
+        fun prettifyInput(numAsText: String) : String {
+            // transforms to number to properly parse decimals
+            val parsedNumber = parseStringToNum(numAsText)
             Log.d("CUSTOM","PRETTIFIER; BEFORE: $parsedNumber")
+            // transforms to text again to properly add grouping separators
             val prettifiedNumber = parseNumToString(parsedNumber)
             Log.d("CUSTOM","PRETTIFIER; AFTER: $prettifiedNumber")
-            return prettifiedNumber
+
+            if (numAsText.last() == decimalSeparator) {
+                return prettifiedNumber.plus(decimalSeparator)
+            } else (
+                return prettifiedNumber
+            )
+        }
+        fun isDecimal(num: Double) : Boolean {
+            var isDecimal = false
+            if (num.toInt().toDouble() != num) {
+                isDecimal = true
+            }
+            Log.d("CUSTOM","isDecimal?: $isDecimal")
+            return isDecimal
         }
     }
 }
